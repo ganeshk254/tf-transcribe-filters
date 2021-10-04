@@ -1,0 +1,33 @@
+#!/bin/bash
+# This will create the filter if it's not there and update it if it's already present
+set -ex
+
+# Sample Values
+# FILTER="no-hello-world"
+# WORDLIST="hello, world"
+# REGION="us-east-1"
+# LANG="en-US"
+
+create_filter() {
+  aws transcribe create-vocabulary-filter \
+    --vocabulary-filter-name "${FILTER}" \
+    --language-code "${LANG}" \
+    --words ${WORDLIST} \
+    --region "${REGION}"
+}
+
+update_filter() {
+  aws transcribe update-vocabulary-filter \
+    --vocabulary-filter-name "${FILTER}" \
+    --words ${WORDLIST} \
+    --region "${REGION}"
+}
+
+# list-vocabulary-filters has a --name-contains options but it will generate false positives due to substring matches, let's use jq.
+# shellcheck disable=SC2086
+DOES_FILTER_EXIST=$(aws transcribe list-vocabulary-filters | jq -r '.VocabularyFilters[] | select(.VocabularyFilterName=='\"${FILTER}\"') | any')
+if [ "${DOES_FILTER_EXIST}" = true ]; then
+  update_filter
+else
+  create_filter
+fi
